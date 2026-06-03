@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Her Job Hub</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup">
+    <div class="header">
+      <div class="logo">✨</div>
+      <div>
+        <div class="title">Her Job Hub</div>
+        <div class="subtitle">AI Job Application Assistant</div>
+      </div>
+    </div>
+
+    <div id="profile-status" class="status-box status-loading">
+      <span class="status-dot"></span>
+      <span id="status-text">Loading profile…</span>
+    </div>
+
+    <div id="profile-summary" class="profile-summary hidden">
+      <div class="profile-name" id="profile-name"></div>
+      <div class="profile-email" id="profile-email"></div>
+    </div>
+
+    <button id="autofill-btn" class="btn btn-primary" disabled>
+      <span id="btn-text">Auto-fill this page</span>
+    </button>
+
+    <div id="fill-result" class="fill-result hidden"></div>
+
+    <div class="divider"></div>
+
+    <div class="footer">
+      <a id="open-app" href="#" class="app-link">Open Her Job Hub →</a>
+      <div class="hint" id="page-hint"></div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
