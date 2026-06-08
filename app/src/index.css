@@ -544,3 +544,187 @@ select {
 
 /* ── Copy button ── */
 .copy-row { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; }
+
+/* ── Tag input (desired roles) ── */
+.tag-input-wrapper {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  min-height: 44px;
+  cursor: text;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.tag-input-wrapper:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+.tag-input-field {
+  border: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  background: transparent;
+  font-size: 0.9375rem;
+  color: var(--text);
+  flex: 1;
+  min-width: 140px;
+  width: auto;
+}
+.tag-input-field::placeholder { color: var(--text-muted); }
+
+/* ── Spinner small variant ── */
+.spinner-sm { width: 14px; height: 14px; border-width: 2px; }
+.spinner-primary { border-color: var(--primary-200); border-top-color: var(--primary); }
+
+/* ── URL input row (Apply page) ── */
+.url-input-row {
+  display: flex; gap: 0.5rem; align-items: stretch;
+}
+.url-input-row input { flex: 1; }
+.url-input-row .btn { flex-shrink: 0; }
+
+/* ── Extra context collapsible (Apply page) ── */
+.extra-context-section {
+  margin-top: 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  overflow: hidden;
+}
+.extra-context-toggle {
+  width: 100%; text-align: left;
+  background: none; border: none; cursor: pointer;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem; font-weight: 500; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background 150ms;
+}
+.extra-context-toggle:hover { background: var(--gray-50); }
+.extra-context-badge {
+  font-size: 0.75rem; color: var(--success); font-weight: 700;
+}
+.extra-context-body {
+  padding: 0 0.875rem 0.875rem;
+  border-top: 1px solid var(--border);
+}
+.extra-context-body textarea {
+  margin-top: 0.625rem;
+}
+
+/* ── Copy row gap for PDF + copy buttons ── */
+.copy-row { gap: 0.375rem; }
+
+/* ── Find Jobs page ── */
+.job-results { display: flex; flex-direction: column; gap: 0.875rem; }
+
+.job-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.125rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 150ms, border-color 150ms;
+}
+.job-card:hover { box-shadow: var(--shadow-md); border-color: var(--primary-200); }
+
+.job-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  margin-bottom: 0.625rem;
+}
+.job-card-title { font-weight: 700; font-size: 0.9375rem; color: var(--text); margin-bottom: 0.125rem; }
+.job-card-company { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
+
+.job-card-meta {
+  display: flex; flex-wrap: wrap; gap: 0.75rem;
+  font-size: 0.8125rem; color: var(--text-muted);
+  margin-bottom: 0.625rem;
+}
+.job-meta-item { display: flex; align-items: center; gap: 0.25rem; }
+
+.job-card-fit {
+  font-size: 0.8125rem; color: var(--text-secondary);
+  background: var(--primary-50); border: 1px solid var(--primary-100);
+  border-radius: var(--radius); padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem; line-height: 1.5;
+}
+.job-fit-label { font-weight: 600; color: var(--primary-700); }
+
+.job-card-actions { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+
+/* ── Find Jobs results header ── */
+.results-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.results-count { font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+.results-time  { font-size: 0.8125rem; color: var(--text-muted); }
+
+/* ── Filter divider ── */
+.filter-divider {
+  color: var(--border); align-self: center; user-select: none;
+  font-size: 0.75rem;
+}
+
+/* ── Source & recency badges ── */
+.badge-source-linkedin   { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+.badge-source-indeed     { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+.badge-source-glassdoor  { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+.badge-source-workopolis { background: #FAF5FF; color: #7E22CE; border: 1px solid #E9D5FF; }
+.badge-source-monster    { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+.badge-source-zip        { background: #F0FDFA; color: #0F766E; border: 1px solid #99F6E4; }
+.badge-source-wellfound  { background: #F8FAFC; color: #1E293B; border: 1px solid #CBD5E1; }
+.badge-source-jobbank    { background: #FFF1F2; color: #BE123C; border: 1px solid #FECDD3; }
+.badge-recency-green     { background: var(--success-bg); color: #065F46; border: 1px solid #A7F3D0; }
+.badge-recency-amber     { background: var(--warning-bg); color: #B45309; border: 1px solid #FDE68A; }
+.badge-fit               { background: var(--primary-50);  color: var(--primary-700); border: 1px solid var(--primary-200); }
+
+/* ── Job card badge row ── */
+.job-card-badges { display: flex; gap: 0.375rem; flex-wrap: wrap; align-items: flex-start; flex-shrink: 0; }
+.job-card-main   { flex: 1; min-width: 0; }
+
+/* ── Search log debug section ── */
+.search-log-section {
+  margin-top: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--gray-50);
+  overflow: hidden;
+}
+.search-log-toggle {
+  width: 100%; text-align: left;
+  background: none; border: none; cursor: pointer;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem; font-weight: 500; color: var(--text-muted);
+  transition: background 150ms;
+}
+.search-log-toggle:hover { background: var(--gray-100); }
+.search-log-body {
+  padding: 0 0.875rem 0.875rem;
+  border-top: 1px solid var(--border);
+}
+.search-log-list {
+  list-style: decimal; padding-left: 1.25rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+  margin: 0;
+}
+.search-log-list li { font-size: 0.8125rem; color: var(--text-secondary); }
+.search-log-list code {
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 0.75rem; background: white;
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 1px 5px; word-break: break-all;
+}
+
+/* Profile snapshot inside Find Jobs card */
+.profile-snapshot-row {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  margin-bottom: 0.625rem;
+}
+.profile-snapshot-row:last-child { margin-bottom: 0; }
+.snapshot-label {
+  font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  min-width: 72px; padding-top: 0.2rem; flex-shrink: 0;
+}

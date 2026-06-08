@@ -3,6 +3,7 @@ import Navbar from './components/Navbar'
 import Profile from './pages/Profile'
 import Apply from './pages/Apply'
 import Tracker from './pages/Tracker'
+import FindJobs from './pages/FindJobs'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/apply" element={<Apply />} />
           <Route path="/tracker" element={<Tracker />} />
+          <Route path="/find-jobs" element={<FindJobs />} />
         </Routes>
       </main>
     </div>

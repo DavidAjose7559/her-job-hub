@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
-import { generateApplicationMaterials, parseGeneratedOutput } from '../lib/anthropic'
+import { generateApplicationMaterials, parseGeneratedOutput, extractJobFromUrl } from '../lib/anthropic'
+import { downloadAsPdf } from '../lib/pdfExport'
 
 const INITIAL_PROFILE = {
   firstName: '', lastName: '', email: '', phone: '',
@@ -26,9 +27,16 @@ export default function Apply() {
   const [profile] = useLocalStorage('hjh_profile', INITIAL_PROFILE)
   const [, setApplications] = useLocalStorage('hjh_applications', [])
 
+  const [jobUrl, setJobUrl] = useState('')
+  const [fetchingUrl, setFetchingUrl] = useState(false)
+  const [urlError, setUrlError] = useState('')
+
   const [jobTitle, setJobTitle] = useState('')
   const [company, setCompany] = useState('')
   const [jobDescription, setJobDescription] = useState('')
+
+  const [extraContext, setExtraContext] = useState('')
+  const [showExtra, setShowExtra] = useState(false)
 
   const [rawOutput, setRawOutput] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -36,10 +44,39 @@ export default function Apply() {
   const [error, setError] = useState('')
   const [savedToTracker, setSavedToTracker] = useState(false)
 
+  useEffect(() => {
+    const raw = localStorage.getItem('hjh_prefill_job')
+    if (!raw) return
+    try {
+      const { title, company: co, description, url } = JSON.parse(raw)
+      if (title) setJobTitle(title)
+      if (co) setCompany(co)
+      if (description) setJobDescription(description)
+      if (url) setJobUrl(url)
+    } catch {}
+    localStorage.removeItem('hjh_prefill_job')
+  }, [])
+
   const parsed = parseGeneratedOutput(rawOutput)
   const hasOutput = rawOutput.trim().length > 0
 
   const profileComplete = profile.firstName || profile.resume || profile.skills?.length > 0
+
+  const handleFetchUrl = async () => {
+    if (!jobUrl.trim()) return
+    setUrlError('')
+    setFetchingUrl(true)
+    try {
+      const { title, company: co, description } = await extractJobFromUrl(jobUrl)
+      if (title) setJobTitle(title)
+      if (co) setCompany(co)
+      if (description) setJobDescription(description)
+    } catch (err) {
+      setUrlError(err.message || 'Could not fetch job details. Paste the description manually.')
+    } finally {
+      setFetchingUrl(false)
+    }
+  }
 
   const handleGenerate = async () => {
     if (!jobTitle.trim() || !company.trim() || !jobDescription.trim()) {
@@ -51,14 +88,21 @@ export default function Apply() {
     setSavedToTracker(false)
     setIsGenerating(true)
 
+    let accumulated = ''
     try {
       await generateApplicationMaterials(
         profile,
         jobTitle,
         company,
         jobDescription,
-        (chunk) => setRawOutput((prev) => prev + chunk),
+        (chunk) => {
+          accumulated += chunk
+          setRawOutput((prev) => prev + chunk)
+        },
+        extraContext,
       )
+      const { coverLetter } = parseGeneratedOutput(accumulated)
+      if (coverLetter) localStorage.setItem('hjh_last_cover_letter', coverLetter)
     } catch (err) {
       setError(err.message || 'Something went wrong. Check your API key and try again.')
     } finally {
@@ -71,7 +115,7 @@ export default function Apply() {
       id: crypto.randomUUID(),
       company,
       role: jobTitle,
-      jobUrl: '',
+      jobUrl,
       status: 'Applied',
       dateAdded: new Date().toISOString(),
       dateApplied: new Date().toISOString().split('T')[0],
@@ -87,7 +131,7 @@ export default function Apply() {
     <div className="page-wide">
       <div className="page-header">
         <h1>Generate Application</h1>
-        <p>Paste a job description and get a tailored resume + cover letter written in your voice.</p>
+        <p>Paste a job description (or drop a URL) and get a tailored resume + cover letter written in your voice.</p>
       </div>
 
       {!profileComplete && (
@@ -103,6 +147,32 @@ export default function Apply() {
             <div className="card-header">
               <div className="card-title"><span className="card-title-icon">💼</span> Job Details</div>
             </div>
+
+            {/* URL fetch */}
+            <div className="form-group">
+              <label>Paste Job URL <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional — auto-fills the fields below)</span></label>
+              <div className="url-input-row">
+                <input
+                  type="url"
+                  value={jobUrl}
+                  onChange={(e) => { setJobUrl(e.target.value); setUrlError('') }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleFetchUrl()}
+                  placeholder="https://jobs.lever.co/company/job-id"
+                  disabled={fetchingUrl}
+                />
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleFetchUrl}
+                  disabled={!jobUrl.trim() || fetchingUrl}
+                >
+                  {fetchingUrl ? <><span className="spinner spinner-sm spinner-primary" />Fetching…</> : 'Fetch'}
+                </button>
+              </div>
+              {urlError && <div className="alert alert-error" style={{ marginTop: '0.5rem', marginBottom: 0 }}>{urlError}</div>}
+            </div>
+
+            <hr className="section-divider" />
+
             {error && <div className="alert alert-error">{error}</div>}
             <div className="form-group">
               <label>Job Title *</label>
@@ -127,11 +197,36 @@ export default function Apply() {
               <textarea
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                style={{ minHeight: '280px' }}
+                style={{ minHeight: '240px' }}
                 placeholder="Paste the full job description here — responsibilities, requirements, nice-to-haves, about the company, etc."
               />
             </div>
           </div>
+          {/* Extra context */}
+          <div className="extra-context-section">
+            <button
+              type="button"
+              className="extra-context-toggle"
+              onClick={() => setShowExtra((v) => !v)}
+            >
+              <span>{showExtra ? '▾' : '▸'} Anything to add before generating?</span>
+              {extraContext.trim() && <span className="extra-context-badge">✓</span>}
+            </button>
+            {showExtra && (
+              <div className="extra-context-body">
+                <textarea
+                  value={extraContext}
+                  onChange={(e) => setExtraContext(e.target.value)}
+                  placeholder='e.g. "I also know Python but forgot to add it — beginner level" or "I have Salesforce experience from a side project"'
+                  style={{ minHeight: '90px' }}
+                />
+                <p className="text-muted" style={{ marginTop: '0.375rem' }}>
+                  Add skills, experiences, or context not in your resume. Be honest about your level — the AI will include it accurately.
+                </p>
+              </div>
+            )}
+          </div>
+
           <button
             className="btn btn-gradient btn-lg w-full"
             style={{ marginTop: '1rem' }}
@@ -183,6 +278,12 @@ export default function Apply() {
                   <>
                     {parsed.resume && (
                       <div className="copy-row">
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => downloadAsPdf(parsed.resume, 'Resume', profile, company)}
+                        >
+                          ⬇ PDF
+                        </button>
                         <CopyButton text={parsed.resume} />
                       </div>
                     )}
@@ -195,6 +296,12 @@ export default function Apply() {
                   <>
                     {parsed.coverLetter && (
                       <div className="copy-row">
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => downloadAsPdf(parsed.coverLetter, 'Cover-Letter', profile, company)}
+                        >
+                          ⬇ PDF
+                        </button>
                         <CopyButton text={parsed.coverLetter} />
                       </div>
                     )}

@@ -19,6 +19,12 @@ const ClipboardIcon = () => (
   </svg>
 )
 
+const SearchIcon = () => (
+  <svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+  </svg>
+)
+
 export default function Navbar() {
   return (
     <nav className="navbar">
@@ -31,6 +37,10 @@ export default function Navbar() {
           <NavLink to="/profile" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             <UserIcon />
             <span>Profile</span>
+          </NavLink>
+          <NavLink to="/find-jobs" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+            <SearchIcon />
+            <span>Find Jobs</span>
           </NavLink>
           <NavLink to="/apply" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             <SparklesIcon />
