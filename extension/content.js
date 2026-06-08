@@ -1,5 +1,33 @@
 // Her Job Hub — content.js
-// Runs on all pages. Receives HJH_AUTOFILL message from popup and fills form fields.
+// Runs on all pages. Two roles:
+//   1. Exposes window.__hjhGetSession so popup.js can read the Supabase session
+//      via postMessage (chrome.scripting.executeScript can't read localStorage
+//      directly across extension/page isolation).
+//   2. Receives HJH_AUTOFILL message from popup and fills form fields.
+
+// ── Session bridge ────────────────────────────────────────────────────────────
+function getSessionFromPage() {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', handler)
+      resolve(null)
+    }, 3000)
+
+    function handler(event) {
+      if (event.data?.type === 'HJH_SESSION_RESPONSE') {
+        clearTimeout(timeout)
+        window.removeEventListener('message', handler)
+        resolve(event.data)
+      }
+    }
+
+    window.addEventListener('message', handler)
+    window.postMessage({ type: 'HJH_GET_SESSION' }, '*')
+  })
+}
+
+// Expose for popup.js via chrome.scripting.executeScript
+window.__hjhGetSession = getSessionFromPage
 
 // ── Native value setter (works with React / Vue / Angular) ────────────────────
 function setNativeValue(el, value) {

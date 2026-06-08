@@ -54,13 +54,21 @@ async function findAppTab() {
 }
 
 async function readSessionFromTab(tabId) {
+  // Use window.__hjhGetSession (injected by content.js) which talks to the
+  // page via postMessage — this works across the extension/page isolation
+  // boundary that blocks direct localStorage access from executeScript.
   const [result] = await chrome.scripting.executeScript({
     target: { tabId },
-    func: (sbKey) => ({
-      raw:         localStorage.getItem(sbKey),
-      coverLetter: localStorage.getItem('hjh_last_cover_letter'),
-    }),
-    args: [SUPABASE_SB_KEY],
+    func: async () => {
+      if (typeof window.__hjhGetSession === 'function') {
+        const data = await window.__hjhGetSession()
+        if (data) return { raw: data.session, coverLetter: data.coverLetter }
+      }
+      // Fallback: direct read (works on localhost / non-isolated origins)
+      const raw         = localStorage.getItem('sb-xofnraiiieapgqfukcex-auth-token')
+      const coverLetter = localStorage.getItem('hjh_last_cover_letter')
+      return { raw, coverLetter }
+    },
   })
   return result?.result || null
 }

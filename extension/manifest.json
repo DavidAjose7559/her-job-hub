@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Auto-fill job applications using your Her Job Hub profile",
   "permissions": ["activeTab", "storage", "scripting", "tabs"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": ["<all_urls>", "https://her-job-hub.vercel.app/*"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Her Job Hub"
