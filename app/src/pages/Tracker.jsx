@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const STATUSES = ['Saved', 'Applied', 'Interview', 'Offer', 'Rejected']
 
@@ -20,7 +21,22 @@ const BLANK_FORM = {
   dateApplied: '', notes: '',
 }
 
-function Modal({ title, onClose, onSubmit, form, setForm, editing }) {
+function mapRow(row) {
+  return {
+    id:                   row.id,
+    company:              row.company              || '',
+    role:                 row.role                 || '',
+    jobUrl:               row.job_url              || '',
+    status:               row.status               || 'Saved',
+    dateAdded:            row.created_at,
+    dateApplied:          row.date_applied         || '',
+    notes:                row.notes                || '',
+    generatedResume:      row.generated_resume     || '',
+    generatedCoverLetter: row.generated_cover_letter || '',
+  }
+}
+
+function Modal({ title, onClose, onSubmit, form, setForm, editing, saving }) {
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -66,8 +82,8 @@ function Modal({ title, onClose, onSubmit, form, setForm, editing }) {
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-gradient" onClick={onSubmit}>
-            {editing ? 'Save Changes' : 'Add Application'}
+          <button className="btn btn-gradient" onClick={onSubmit} disabled={saving}>
+            {saving ? <><span className="spinner" />{editing ? 'Saving…' : 'Adding…'}</> : (editing ? 'Save Changes' : 'Add Application')}
           </button>
         </div>
       </div>
@@ -76,68 +92,86 @@ function Modal({ title, onClose, onSubmit, form, setForm, editing }) {
 }
 
 export default function Tracker() {
-  const [applications, setApplications] = useLocalStorage('hjh_applications', [])
-  const [filter, setFilter] = useState('All')
-  const [showModal, setShowModal] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState(BLANK_FORM)
+  const { user } = useAuth()
+  const [applications, setApplications] = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [saving, setSaving]             = useState(false)
+  const [filter, setFilter]             = useState('All')
+  const [showModal, setShowModal]       = useState(false)
+  const [editingId, setEditingId]       = useState(null)
+  const [form, setForm]                 = useState(BLANK_FORM)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
-  const apps = applications || []
+  useEffect(() => {
+    if (!user) return
+    supabase
+      .from('applications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setApplications((data || []).map(mapRow))
+        setLoading(false)
+      })
+  }, [user])
 
-  const stats = {
-    total: apps.length,
-    applied: apps.filter((a) => a.status === 'Applied').length,
-    interview: apps.filter((a) => a.status === 'Interview').length,
-    offer: apps.filter((a) => a.status === 'Offer').length,
+  const apps     = applications
+  const stats    = {
+    total:    apps.length,
+    applied:  apps.filter((a) => a.status === 'Applied').length,
+    interview:apps.filter((a) => a.status === 'Interview').length,
+    offer:    apps.filter((a) => a.status === 'Offer').length,
     rejected: apps.filter((a) => a.status === 'Rejected').length,
   }
-
   const filtered = filter === 'All' ? apps : apps.filter((a) => a.status === filter)
 
-  const openAdd = () => {
-    setEditingId(null)
-    setForm(BLANK_FORM)
-    setShowModal(true)
-  }
-
+  const openAdd  = () => { setEditingId(null); setForm(BLANK_FORM); setShowModal(true) }
   const openEdit = (app) => {
     setEditingId(app.id)
-    setForm({
-      company: app.company || '',
-      role: app.role || '',
-      jobUrl: app.jobUrl || '',
-      status: app.status || 'Saved',
-      dateApplied: app.dateApplied || '',
-      notes: app.notes || '',
-    })
+    setForm({ company: app.company, role: app.role, jobUrl: app.jobUrl, status: app.status, dateApplied: app.dateApplied, notes: app.notes })
     setShowModal(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.company.trim() || !form.role.trim()) return
+    setSaving(true)
     if (editingId) {
-      setApplications(apps.map((a) => a.id === editingId ? { ...a, ...form } : a))
+      const { error } = await supabase
+        .from('applications')
+        .update({ company: form.company, role: form.role, job_url: form.jobUrl, status: form.status, date_applied: form.dateApplied, notes: form.notes })
+        .eq('id', editingId)
+      if (!error) setApplications(apps.map((a) => a.id === editingId ? { ...a, ...form, jobUrl: form.jobUrl, dateApplied: form.dateApplied } : a))
     } else {
-      setApplications([
-        { id: crypto.randomUUID(), dateAdded: new Date().toISOString(), ...form },
-        ...apps,
-      ])
+      const { data, error } = await supabase
+        .from('applications')
+        .insert({ user_id: user.id, company: form.company, role: form.role, job_url: form.jobUrl, status: form.status, date_applied: form.dateApplied, notes: form.notes, generated_resume: '', generated_cover_letter: '' })
+        .select()
+        .single()
+      if (!error && data) setApplications([mapRow(data), ...apps])
     }
+    setSaving(false)
     setShowModal(false)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    await supabase.from('applications').delete().eq('id', id)
     setApplications(apps.filter((a) => a.id !== id))
     setDeleteConfirm(null)
   }
 
   const getInitial = (company) => (company || '?')[0].toUpperCase()
-
   const formatDate = (dateStr) => {
     if (!dateStr) return null
     try { return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
     catch { return dateStr }
+  }
+
+  if (loading) {
+    return (
+      <div className="page-wide" style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}>
+        <span className="spinner spinner-primary" style={{ width: 36, height: 36, borderWidth: 3 }} />
+      </div>
+    )
   }
 
   return (
@@ -150,46 +184,23 @@ export default function Tracker() {
         <button className="btn btn-gradient" onClick={openAdd}>+ Add Application</button>
       </div>
 
-      {/* Stats */}
       <div className="stats-grid">
-        <div className="stat-card primary">
-          <div className="stat-number">{stats.total}</div>
-          <div className="stat-label">Total</div>
-        </div>
-        <div className="stat-card blue">
-          <div className="stat-number">{stats.applied}</div>
-          <div className="stat-label">Applied</div>
-        </div>
-        <div className="stat-card amber">
-          <div className="stat-number">{stats.interview}</div>
-          <div className="stat-label">Interviews</div>
-        </div>
-        <div className="stat-card green">
-          <div className="stat-number">{stats.offer}</div>
-          <div className="stat-label">Offers</div>
-        </div>
-        <div className="stat-card red">
-          <div className="stat-number">{stats.rejected}</div>
-          <div className="stat-label">Rejected</div>
-        </div>
+        <div className="stat-card primary"><div className="stat-number">{stats.total}</div><div className="stat-label">Total</div></div>
+        <div className="stat-card blue"><div className="stat-number">{stats.applied}</div><div className="stat-label">Applied</div></div>
+        <div className="stat-card amber"><div className="stat-number">{stats.interview}</div><div className="stat-label">Interviews</div></div>
+        <div className="stat-card green"><div className="stat-number">{stats.offer}</div><div className="stat-label">Offers</div></div>
+        <div className="stat-card red"><div className="stat-number">{stats.rejected}</div><div className="stat-label">Rejected</div></div>
       </div>
 
-      {/* Filters */}
       <div className="filter-row">
         {['All', ...STATUSES].map((s) => (
-          <button
-            key={s}
-            className={`filter-chip${filter === s ? ' active' : ''}`}
-            onClick={() => setFilter(s)}
-          >
+          <button key={s} className={`filter-chip${filter === s ? ' active' : ''}`} onClick={() => setFilter(s)}>
             {s !== 'All' && STATUS_EMOJI[s] + ' '}{s}
-            {s !== 'All' && <span style={{ opacity: 0.7 }}> ({apps.filter((a) => a.status === s).length})</span>}
-            {s === 'All' && <span style={{ opacity: 0.7 }}> ({apps.length})</span>}
+            <span style={{ opacity: 0.7 }}> ({s === 'All' ? apps.length : apps.filter((a) => a.status === s).length})</span>
           </button>
         ))}
       </div>
 
-      {/* Applications list */}
       {filtered.length === 0 ? (
         <div className="card">
           <div className="empty-state">
@@ -207,20 +218,10 @@ export default function Tracker() {
                 <div className="app-card-title">{app.role}</div>
                 <div className="app-card-sub">{app.company}</div>
                 <div className="app-card-meta">
-                  <span className={`badge ${STATUS_CLASS[app.status]}`}>
-                    {STATUS_EMOJI[app.status]} {app.status}
-                  </span>
-                  {app.dateApplied && (
-                    <span className="text-muted text-small">Applied {formatDate(app.dateApplied)}</span>
-                  )}
+                  <span className={`badge ${STATUS_CLASS[app.status]}`}>{STATUS_EMOJI[app.status]} {app.status}</span>
+                  {app.dateApplied && <span className="text-muted text-small">Applied {formatDate(app.dateApplied)}</span>}
                   {app.jobUrl && (
-                    <a
-                      href={app.jobUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-small"
-                      style={{ color: 'var(--primary)', textDecoration: 'none' }}
-                    >
+                    <a href={app.jobUrl} target="_blank" rel="noreferrer" className="text-small" style={{ color: 'var(--primary)', textDecoration: 'none' }}>
                       View Job ↗
                     </a>
                   )}
@@ -255,6 +256,7 @@ export default function Tracker() {
           form={form}
           setForm={setForm}
           editing={!!editingId}
+          saving={saving}
         />
       )}
     </div>

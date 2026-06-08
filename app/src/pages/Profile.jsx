@@ -1,7 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { extractTextFromFile } from '../lib/fileExtract'
 import { extractSkillsFromResume } from '../lib/anthropic'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const INITIAL_PROFILE = {
   firstName: '', lastName: '', email: '', phone: '',
@@ -216,17 +218,38 @@ function normalizeDesiredRoles(val) {
 }
 
 export default function Profile() {
-  const [saved, setSaved] = useLocalStorage('hjh_profile', INITIAL_PROFILE)
-  const [form, setForm] = useState(() => ({
-    ...INITIAL_PROFILE,
-    ...saved,
-    preferences: {
-      ...INITIAL_PROFILE.preferences,
-      ...saved.preferences,
-      desiredRoles: normalizeDesiredRoles(saved.preferences?.desiredRoles),
-    },
-  }))
+  const { user } = useAuth()
+  // localStorage kept as read cache so Apply/FindJobs can read the profile without a DB call
+  const [, setSaved] = useLocalStorage('hjh_profile', INITIAL_PROFILE)
+  const [form, setForm] = useState(INITIAL_PROFILE)
+  const [profileLoading, setProfileLoading] = useState(true)
   const [saveState, setSaveState] = useState('idle')
+
+  useEffect(() => {
+    if (!user) { setProfileLoading(false); return }
+    supabase
+      .from('profiles')
+      .select('data')
+      .eq('id', user.id)
+      .single()
+      .then(({ data: row }) => {
+        if (row?.data) {
+          const d = row.data
+          const merged = {
+            ...INITIAL_PROFILE,
+            ...d,
+            preferences: {
+              ...INITIAL_PROFILE.preferences,
+              ...d.preferences,
+              desiredRoles: normalizeDesiredRoles(d.preferences?.desiredRoles),
+            },
+          }
+          setForm(merged)
+          setSaved(merged) // keep localStorage in sync for Apply/FindJobs
+        }
+        setProfileLoading(false)
+      })
+  }, [user])
   const [resumeFileLoading, setResumeFileLoading] = useState(false)
   const [toneFileLoading, setToneFileLoading] = useState(false)
   const [extractingSkills, setExtractingSkills] = useState(false)
@@ -327,10 +350,27 @@ export default function Profile() {
 
   const handleFillTestData = () => setForm(TEST_DATA)
 
-  const handleSave = () => {
-    setSaved(form)
-    setSaveState('saved')
-    setTimeout(() => setSaveState('idle'), 2500)
+  const handleSave = async () => {
+    setSaveState('saving')
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({ id: user.id, data: form, updated_at: new Date().toISOString() })
+    if (error) {
+      setSaveState('error')
+      setTimeout(() => setSaveState('idle'), 3000)
+    } else {
+      setSaved(form) // keep localStorage cache in sync
+      setSaveState('saved')
+      setTimeout(() => setSaveState('idle'), 2500)
+    }
+  }
+
+  if (profileLoading) {
+    return (
+      <div className="page" style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}>
+        <span className="spinner spinner-primary" style={{ width: 36, height: 36, borderWidth: 3 }} />
+      </div>
+    )
   }
 
   return (
@@ -566,11 +606,11 @@ export default function Profile() {
 
       {/* Save bar */}
       <div className="flex items-center justify-between" style={{ marginTop: '1.5rem' }}>
-        {saveState === 'saved' && (
-          <div className="save-indicator">✓ Profile saved</div>
-        )}
-        {saveState !== 'saved' && <div />}
-        <button className="btn btn-gradient btn-lg" onClick={handleSave}>
+        {saveState === 'saved'  && <div className="save-indicator">✓ Profile saved</div>}
+        {saveState === 'error'  && <div className="alert alert-error" style={{ padding: '0.375rem 0.75rem' }}>Save failed — try again</div>}
+        {saveState === 'saving' && <div className="save-indicator"><span className="spinner spinner-primary spinner-sm" /> Saving…</div>}
+        {!['saved','error','saving'].includes(saveState) && <div />}
+        <button className="btn btn-gradient btn-lg" onClick={handleSave} disabled={saveState === 'saving' || profileLoading}>
           Save Profile
         </button>
       </div>

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { searchJobs } from '../lib/anthropic'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const INITIAL_PROFILE = {
   firstName: '', lastName: '', email: '', phone: '',
@@ -128,8 +130,8 @@ function JobCard({ job, onGenerate, onSave, saved }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function FindJobs() {
+  const { user } = useAuth()
   const [profile] = useLocalStorage('hjh_profile', INITIAL_PROFILE)
-  const [, setApplications] = useLocalStorage('hjh_applications', [])
   const navigate = useNavigate()
 
   const [allJobs, setAllJobs]             = useState([])
@@ -223,20 +225,19 @@ export default function FindJobs() {
     navigate('/apply')
   }
 
-  const handleSave = (job) => {
-    setApplications((prev) => [{
-      id:                    crypto.randomUUID(),
+  const handleSave = async (job) => {
+    const { error } = await supabase.from('applications').insert({
+      user_id:               user.id,
       company:               job.company || '',
       role:                  job.title   || '',
-      jobUrl:                job.url     || '',
+      job_url:               job.url     || '',
       status:                'Saved',
-      dateAdded:             new Date().toISOString(),
-      dateApplied:           '',
+      date_applied:          '',
       notes:                 job.whyFit  || '',
-      generatedResume:       '',
-      generatedCoverLetter:  '',
-    }, ...(prev || [])])
-    setSavedIds((prev) => new Set([...prev, job.url || job.title]))
+      generated_resume:      '',
+      generated_cover_letter:'',
+    })
+    if (!error) setSavedIds((prev) => new Set([...prev, job.url || job.title]))
   }
 
   // ── Loading step messages ─────────────────────────────────────────────────

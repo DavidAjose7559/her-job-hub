@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const UserIcon = () => (
   <svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -26,6 +27,11 @@ const SearchIcon = () => (
 )
 
 export default function Navbar() {
+  const { user, signOut } = useAuth()
+  const shortEmail = user?.email
+    ? user.email.length > 22 ? user.email.slice(0, 20) + '…' : user.email
+    : ''
+
   return (
     <nav className="navbar">
       <div className="navbar-inner">
@@ -51,6 +57,12 @@ export default function Navbar() {
             <span>Tracker</span>
           </NavLink>
         </div>
+        {user && (
+          <div className="navbar-user">
+            <span className="navbar-email">{shortEmail}</span>
+            <button className="btn btn-ghost btn-sm" onClick={signOut}>Sign out</button>
+          </div>
+        )}
       </div>
     </nav>
   )

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { generateApplicationMaterials, parseGeneratedOutput, extractJobFromUrl } from '../lib/anthropic'
 import { downloadAsPdf } from '../lib/pdfExport'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const INITIAL_PROFILE = {
   firstName: '', lastName: '', email: '', phone: '',
@@ -24,8 +26,8 @@ function CopyButton({ text }) {
 }
 
 export default function Apply() {
+  const { user } = useAuth()
   const [profile] = useLocalStorage('hjh_profile', INITIAL_PROFILE)
-  const [, setApplications] = useLocalStorage('hjh_applications', [])
 
   const [jobUrl, setJobUrl] = useState('')
   const [fetchingUrl, setFetchingUrl] = useState(false)
@@ -110,21 +112,19 @@ export default function Apply() {
     }
   }
 
-  const handleSaveToTracker = () => {
-    const newApp = {
-      id: crypto.randomUUID(),
+  const handleSaveToTracker = async () => {
+    const { error } = await supabase.from('applications').insert({
+      user_id:               user.id,
       company,
-      role: jobTitle,
-      jobUrl,
-      status: 'Applied',
-      dateAdded: new Date().toISOString(),
-      dateApplied: new Date().toISOString().split('T')[0],
-      notes: '',
-      generatedResume: parsed.resume,
-      generatedCoverLetter: parsed.coverLetter,
-    }
-    setApplications((prev) => [newApp, ...(prev || [])])
-    setSavedToTracker(true)
+      role:                  jobTitle,
+      job_url:               jobUrl,
+      status:                'Applied',
+      date_applied:          new Date().toISOString().split('T')[0],
+      notes:                 '',
+      generated_resume:      parsed.resume,
+      generated_cover_letter:parsed.coverLetter,
+    })
+    if (!error) setSavedToTracker(true)
   }
 
   return (
