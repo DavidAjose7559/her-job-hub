@@ -7,7 +7,10 @@ const APP_URL         = 'https://her-job-hub.vercel.app'
 const JOB_SITE_RE = /linkedin\.com|indeed\.com|greenhouse\.io|lever\.co|workday\.com|myworkdayjobs\.com|glassdoor\.com|ziprecruiter\.com|wellfound\.com|jobbank\.gc\.ca|workopolis\.com/
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
-const $  = (id) => document.getElementById(id)
+// $ always returns null if the ID doesn't exist — every usage below uses
+// optional chaining (?.) so a missing element never throws.
+const $ = (id) => document.getElementById(id)
+
 const ALL_STATES = ['state-loading', 'state-error', 'state-loggedout', 'state-notab', 'state-ready']
 
 function showState(id) {
@@ -24,14 +27,14 @@ function setError(msg) {
 
 function setResult(type, msg) {
   const el = $('fill-result')
+  if (!el) return
   el.className = `fill-result ${type}`
   el.textContent = msg
   el.classList.remove('hidden')
 }
 
-// ── Open-app buttons (all use class .open-app-btn) ────────────────────────────
-// Using class instead of individual IDs so every button — including the new
-// error-state one — works automatically without additional wiring.
+// ── Open-app buttons ──────────────────────────────────────────────────────────
+// All buttons that open the app share the class .open-app-btn — no IDs needed.
 function openApp() {
   console.log('[HJH] Opening app tab:', APP_URL)
   chrome.tabs.create({ url: APP_URL }, () => {
@@ -54,12 +57,10 @@ async function findAppTab() {
 }
 
 async function readSessionFromTab(tabId) {
-  // Use window.__hjhGetSession (injected by content.js) which talks to the
-  // page via postMessage — this works across the extension/page isolation
-  // boundary that blocks direct localStorage access from executeScript.
   const [result] = await chrome.scripting.executeScript({
     target: { tabId },
     func: async () => {
+      // content.js exposes window.__hjhGetSession via postMessage bridge
       if (typeof window.__hjhGetSession === 'function') {
         const data = await window.__hjhGetSession()
         if (data) return { raw: data.session, coverLetter: data.coverLetter }
@@ -109,17 +110,23 @@ let coverLetter = null
 
 function renderReady(p, tabUrl) {
   const name = [p.firstName, p.lastName].filter(Boolean).join(' ') || 'Profile loaded'
-  $('profile-name').textContent  = name
-  $('profile-email').textContent = p.email || ''
-  $('profile-avatar').textContent = (name[0] || '?').toUpperCase()
+  const avatar = $('profile-avatar')
+  const nameEl = $('profile-name')
+  const emailEl = $('profile-email')
+  const hint   = $('page-hint')
 
-  const hint = $('page-hint')
-  if (tabUrl && JOB_SITE_RE.test(tabUrl)) {
-    hint.textContent = '✓ Job site detected — ready to fill'
-    hint.classList.add('detected')
-  } else {
-    hint.textContent = 'Navigate to a job application page to fill'
-    hint.classList.remove('detected')
+  if (nameEl)  nameEl.textContent  = name
+  if (emailEl) emailEl.textContent = p.email || ''
+  if (avatar)  avatar.textContent  = (name[0] || '?').toUpperCase()
+
+  if (hint) {
+    if (tabUrl && JOB_SITE_RE.test(tabUrl)) {
+      hint.textContent = '✓ Job site detected — ready to fill'
+      hint.classList.add('detected')
+    } else {
+      hint.textContent = 'Navigate to a job application page to fill'
+      hint.classList.remove('detected')
+    }
   }
 
   showState('state-ready')
@@ -130,30 +137,26 @@ async function init() {
   console.log('[HJH] Step 1: popup opened')
   showState('state-loading')
 
-  // Timeout — if any await hangs, show a useful error after 5 seconds
   const timeoutId = setTimeout(() => {
     console.warn('[HJH] Timeout: still loading after 5 s')
     setError('Took too long to load. Make sure Her Job Hub is open and you are logged in.')
   }, 5000)
 
   try {
-    // Step 2 — get active tab for URL hint
     console.log('[HJH] Step 2: querying active tab')
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
     const activeUrl   = activeTab?.url || ''
-    const activeTabId = activeTab?.id
     console.log('[HJH] Step 3: active tab url:', activeUrl)
 
-    // Step 3 — load cached profile so UI shows something fast
+    // Show cached profile immediately if we have one
     const cache = await chrome.storage.local.get(['hjhProfile', 'hjhCoverLetter'])
     if (cache.hjhProfile) {
-      console.log('[HJH] Step 3b: cached profile found, showing ready state')
+      console.log('[HJH] Step 3b: cached profile found')
       profile     = cache.hjhProfile
       coverLetter = cache.hjhCoverLetter || null
       renderReady(profile, activeUrl)
     }
 
-    // Step 4 — find Her Job Hub tab
     console.log('[HJH] Step 4: looking for Her Job Hub tab')
     const appTab = await findAppTab()
     console.log('[HJH] Step 5: tab found:', appTab ? appTab.url : 'none')
@@ -164,8 +167,7 @@ async function init() {
       return
     }
 
-    // Step 5 — read Supabase session from that tab's localStorage
-    console.log('[HJH] Step 6: reading localStorage from tab', appTab.id)
+    console.log('[HJH] Step 6: reading session from tab', appTab.id)
     let tabData
     try {
       tabData = await readSessionFromTab(appTab.id)
@@ -183,7 +185,6 @@ async function init() {
       return
     }
 
-    // Step 6 — parse session
     let sessionObj
     try {
       sessionObj = JSON.parse(tabData.raw)
@@ -204,7 +205,6 @@ async function init() {
       return
     }
 
-    // Step 7 — fetch profile from Supabase
     console.log('[HJH] Step 9: calling Supabase for profile')
     const row = await fetchProfile(userId, accessToken)
     console.log('[HJH] Step 10: profile result:', row ? 'loaded' : 'empty')
@@ -224,45 +224,51 @@ async function init() {
   } catch (err) {
     clearTimeout(timeoutId)
     console.error('[HJH] Init error:', err)
-    if (!profile) {
-      setError('Something went wrong: ' + (err.message || 'unknown error'))
-    }
-    // If we already have a cached profile showing, leave it visible
+    if (!profile) setError('Something went wrong: ' + (err.message || 'unknown error'))
   }
 }
 
 // ── Auto-fill button ──────────────────────────────────────────────────────────
-$('autofill-btn').addEventListener('click', async () => {
-  if (!profile) return
-  $('btn-icon').textContent = '⏳'
-  $('btn-text').textContent = 'Filling…'
-  $('autofill-btn').disabled = true
-  $('fill-result').classList.add('hidden')
+const autofillBtn = $('autofill-btn')
+if (autofillBtn) {
+  autofillBtn.addEventListener('click', async () => {
+    if (!profile) return
 
-  try {
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    console.log('[HJH] Sending autofill to tab', activeTab?.id)
-    const response = await chrome.tabs.sendMessage(activeTab.id, {
-      type: 'HJH_AUTOFILL',
-      profile,
-      coverLetter,
-    })
-    const filled = response?.filled ?? 0
-    console.log('[HJH] Filled', filled, 'fields')
-    if (filled > 0) {
-      setResult('success', `✓ Filled ${filled} field${filled !== 1 ? 's' : ''}`)
-    } else {
-      setResult('warn', 'No fillable fields detected on this page.')
+    $('btn-icon')?.textContent  // read is safe; write below uses ?.
+    const btnIcon = $('btn-icon')
+    const btnText = $('btn-text')
+    const fillResult = $('fill-result')
+
+    if (btnIcon) btnIcon.textContent = '⏳'
+    if (btnText) btnText.textContent = 'Filling…'
+    autofillBtn.disabled = true
+    fillResult?.classList.add('hidden')
+
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      console.log('[HJH] Sending autofill to tab', activeTab?.id)
+      const response = await chrome.tabs.sendMessage(activeTab.id, {
+        type: 'HJH_AUTOFILL',
+        profile,
+        coverLetter,
+      })
+      const filled = response?.filled ?? 0
+      console.log('[HJH] Filled', filled, 'fields')
+      if (filled > 0) {
+        setResult('success', `✓ Filled ${filled} field${filled !== 1 ? 's' : ''}`)
+      } else {
+        setResult('warn', 'No fillable fields detected on this page.')
+      }
+    } catch (err) {
+      console.error('[HJH] Autofill error:', err)
+      setResult('error', 'Could not reach page. Refresh and try again.')
     }
-  } catch (err) {
-    console.error('[HJH] Autofill error:', err)
-    setResult('error', 'Could not reach page. Refresh and try again.')
-  }
 
-  $('btn-icon').textContent = '⚡'
-  $('btn-text').textContent = 'Auto-fill this page'
-  $('autofill-btn').disabled = false
-})
+    if (btnIcon) btnIcon.textContent = '⚡'
+    if (btnText) btnText.textContent = 'Auto-fill this page'
+    autofillBtn.disabled = false
+  })
+}
 
 // ── Run ───────────────────────────────────────────────────────────────────────
 init()
