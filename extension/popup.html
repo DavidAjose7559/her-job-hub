@@ -25,12 +25,21 @@
       </div>
     </div>
 
+    <!-- Error / timeout -->
+    <div id="state-error" class="state hidden">
+      <div class="info-box">
+        <div class="info-icon">⚠️</div>
+        <p id="error-msg">Something went wrong loading your profile.</p>
+        <button type="button" class="btn btn-primary btn-sm open-app-btn">Open Her Job Hub →</button>
+      </div>
+    </div>
+
     <!-- Not logged in -->
     <div id="state-loggedout" class="state hidden">
       <div class="info-box">
         <div class="info-icon">🔒</div>
         <p>Log in to Her Job Hub to use auto-fill.</p>
-        <a id="open-app-login" href="#" class="btn btn-primary btn-sm">Open Her Job Hub →</a>
+        <button type="button" class="btn btn-primary btn-sm open-app-btn">Open Her Job Hub →</button>
       </div>
     </div>
 
@@ -39,7 +48,7 @@
       <div class="info-box">
         <div class="info-icon">🔗</div>
         <p>Open Her Job Hub in a tab first, then come back here.</p>
-        <a id="open-app-notab" href="#" class="btn btn-primary btn-sm">Open Her Job Hub →</a>
+        <button type="button" class="btn btn-primary btn-sm open-app-btn">Open Her Job Hub →</button>
       </div>
     </div>
 
@@ -48,8 +57,8 @@
       <div class="profile-card">
         <div class="profile-avatar" id="profile-avatar">D</div>
         <div>
-          <div class="profile-name" id="profile-name">David Ajose</div>
-          <div class="profile-email" id="profile-email">david@email.com</div>
+          <div class="profile-name" id="profile-name"></div>
+          <div class="profile-email" id="profile-email"></div>
         </div>
       </div>
 
@@ -65,7 +74,7 @@
 
     <!-- Footer -->
     <div class="footer">
-      <a id="open-app-footer" href="#" class="app-link">Open Her Job Hub ↗</a>
+      <button type="button" class="app-link open-app-btn">Open Her Job Hub ↗</button>
     </div>
 
   </div>
