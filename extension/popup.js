@@ -52,7 +52,8 @@ document.querySelectorAll('.open-app-btn').forEach((btn) => {
 async function findAppTab() {
   const tabs = await chrome.tabs.query({})
   return tabs.find((t) =>
-    t.url?.includes('her-job-hub') || t.url?.includes('localhost:5173')
+    t.url?.startsWith('https://her-job-hub.vercel.app') ||
+    t.url?.startsWith('http://localhost:5173')
   ) || null
 }
 
