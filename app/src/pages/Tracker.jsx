@@ -24,15 +24,15 @@ const BLANK_FORM = {
 function mapRow(row) {
   return {
     id:                   row.id,
-    company:              row.company              || '',
-    role:                 row.role                 || '',
-    jobUrl:               row.job_url              || '',
-    status:               row.status               || 'Saved',
+    company:              row.company           || '',
+    role:                 row.role              || '',
+    jobUrl:               row.job_url           || '',
+    status:               row.status            || 'Saved',
     dateAdded:            row.created_at,
-    dateApplied:          row.date_applied         || '',
-    notes:                row.notes                || '',
-    generatedResume:      row.generated_resume     || '',
-    generatedCoverLetter: row.generated_cover_letter || '',
+    dateApplied:          row.date_applied      || '',
+    notes:                row.notes             || '',
+    generatedResume:      row.resume_used       || '',
+    generatedCoverLetter: row.cover_letter_used || '',
   }
 }
 
@@ -144,7 +144,7 @@ export default function Tracker() {
     } else {
       const { data, error } = await supabase
         .from('applications')
-        .insert({ user_id: user.id, company: form.company, role: form.role, job_url: form.jobUrl, status: form.status, date_applied: form.dateApplied, notes: form.notes, generated_resume: '', generated_cover_letter: '' })
+        .insert({ user_id: user.id, company: form.company, role: form.role, job_url: form.jobUrl, status: form.status, date_applied: form.dateApplied, notes: form.notes, resume_used: '', cover_letter_used: '' })
         .select()
         .single()
       if (!error && data) setApplications([mapRow(data), ...apps])

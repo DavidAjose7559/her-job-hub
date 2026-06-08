@@ -114,15 +114,15 @@ export default function Apply() {
 
   const handleSaveToTracker = async () => {
     const { error } = await supabase.from('applications').insert({
-      user_id:               user.id,
+      user_id:          user.id,
       company,
-      role:                  jobTitle,
-      job_url:               jobUrl,
-      status:                'Applied',
-      date_applied:          new Date().toISOString().split('T')[0],
-      notes:                 '',
-      generated_resume:      parsed.resume,
-      generated_cover_letter:parsed.coverLetter,
+      role:             jobTitle,
+      job_url:          jobUrl,
+      status:           'Applied',
+      date_applied:     new Date().toISOString().split('T')[0],
+      notes:            '',
+      resume_used:      parsed.resume,
+      cover_letter_used:parsed.coverLetter,
     })
     if (!error) setSavedToTracker(true)
   }

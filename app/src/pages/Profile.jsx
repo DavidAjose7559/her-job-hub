@@ -229,23 +229,43 @@ export default function Profile() {
     if (!user) { setProfileLoading(false); return }
     supabase
       .from('profiles')
-      .select('data')
+      .select('*')
       .eq('id', user.id)
       .single()
-      .then(({ data: row }) => {
-        if (row?.data) {
-          const d = row.data
+      .then(({ data }) => {
+        if (data) {
+          const nameParts = (data.name || '').split(' ')
+          const salary    = (data.salary || '').split('-')
           const merged = {
             ...INITIAL_PROFILE,
-            ...d,
+            firstName:        nameParts[0] || '',
+            lastName:         nameParts.slice(1).join(' ') || '',
+            email:            data.email     || '',
+            phone:            data.phone     || '',
+            location:         data.location  || '',
+            linkedIn:         data.linkedin  || '',
+            portfolio:        data.portfolio || '',
+            resume:           data.resume_text || '',
+            hasUploadedResume:!!(data.resume_text),
+            skills:           Array.isArray(data.skills) ? data.skills : [],
+            toneEssay:        data.tone_sample || '',
             preferences: {
               ...INITIAL_PROFILE.preferences,
-              ...d.preferences,
-              desiredRoles: normalizeDesiredRoles(d.preferences?.desiredRoles),
+              desiredRoles: normalizeDesiredRoles(
+                Array.isArray(data.target_roles) ? data.target_roles : []
+              ),
+              industries: Array.isArray(data.industries)
+                ? data.industries
+                : (data.industries || '').split(',').map((s) => s.trim()).filter(Boolean),
+              workTypes: Array.isArray(data.work_type)
+                ? data.work_type
+                : (data.work_type || '').split(',').map((s) => s.trim()).filter(Boolean),
+              salaryMin: salary[0]?.trim() || '',
+              salaryMax: salary[1]?.trim() || '',
             },
           }
           setForm(merged)
-          setSaved(merged) // keep localStorage in sync for Apply/FindJobs
+          setSaved(merged)
         }
         setProfileLoading(false)
       })
@@ -352,9 +372,31 @@ export default function Profile() {
 
   const handleSave = async () => {
     setSaveState('saving')
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({ id: user.id, data: form, updated_at: new Date().toISOString() })
+    const pref = form.preferences || {}
+    const { error } = await supabase.from('profiles').upsert({
+      id:           user.id,
+      name:         [form.firstName, form.lastName].filter(Boolean).join(' '),
+      email:        form.email      || '',
+      phone:        form.phone      || '',
+      location:     form.location   || '',
+      linkedin:     form.linkedIn   || '',
+      portfolio:    form.portfolio  || '',
+      resume_text:  form.resume     || '',
+      skills:       form.skills     || [],
+      expertise:    (form.skills || [])
+                      .filter((s) => s.name?.trim())
+                      .map((s) => `${s.level} in ${s.name}`)
+                      .join(', '),
+      target_roles: Array.isArray(pref.desiredRoles) ? pref.desiredRoles : [],
+      industries:   (pref.industries || []).join(', '),
+      work_type:    (pref.workTypes  || []).join(', '),
+      salary:       pref.salaryMin && pref.salaryMax
+                      ? `${pref.salaryMin}-${pref.salaryMax}`
+                      : (pref.salaryMin || pref.salaryMax || ''),
+      about:        '',
+      tone_sample:  form.toneEssay  || '',
+      updated_at:   new Date().toISOString(),
+    })
     if (error) {
       setSaveState('error')
       setTimeout(() => setSaveState('idle'), 3000)

@@ -227,15 +227,15 @@ export default function FindJobs() {
 
   const handleSave = async (job) => {
     const { error } = await supabase.from('applications').insert({
-      user_id:               user.id,
-      company:               job.company || '',
-      role:                  job.title   || '',
-      job_url:               job.url     || '',
-      status:                'Saved',
-      date_applied:          '',
-      notes:                 job.whyFit  || '',
-      generated_resume:      '',
-      generated_cover_letter:'',
+      user_id:          user.id,
+      company:          job.company || '',
+      role:             job.title   || '',
+      job_url:          job.url     || '',
+      status:           'Saved',
+      date_applied:     '',
+      notes:            job.whyFit  || '',
+      resume_used:      '',
+      cover_letter_used:'',
     })
     if (!error) setSavedIds((prev) => new Set([...prev, job.url || job.title]))
   }
