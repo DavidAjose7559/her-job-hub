@@ -1,56 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Her Job Hub — Auto-Fill",
-  "version": "1.0.0",
-  "description": "Auto-fill job applications using your Her Job Hub profile.",
-  "permissions": [
-    "storage",
-    "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "http://localhost:5173/*",
-    "https://*.vercel.app/*",
-    "https://www.linkedin.com/*",
-    "https://linkedin.com/*",
-    "https://www.indeed.com/*",
-    "https://indeed.com/*",
-    "https://boards.greenhouse.io/*",
-    "https://*.greenhouse.io/*",
-    "https://jobs.lever.co/*",
-    "https://*.lever.co/*",
-    "https://*.myworkdayjobs.com/*",
-    "https://*.workday.com/*"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "http://localhost:5173/*",
-        "https://*.vercel.app/*"
-      ],
-      "js": ["content-webapp.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://www.linkedin.com/*",
-        "https://linkedin.com/*",
-        "https://www.indeed.com/*",
-        "https://indeed.com/*",
-        "https://boards.greenhouse.io/*",
-        "https://*.greenhouse.io/*",
-        "https://jobs.lever.co/*",
-        "https://*.lever.co/*",
-        "https://*.myworkdayjobs.com/*",
-        "https://*.workday.com/*"
-      ],
-      "js": ["content-jobsites.js"],
-      "run_at": "document_idle"
-    }
-  ],
+  "name": "Her Job Hub — Auto Fill",
+  "version": "1.0",
+  "description": "Auto-fill job applications using your Her Job Hub profile",
+  "permissions": ["activeTab", "storage", "scripting", "tabs"],
+  "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Her Job Hub"
@@ -59,5 +13,12 @@
     "16":  "icons/icon16.png",
     "48":  "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }

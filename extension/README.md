@@ -1,59 +1,58 @@
-# Her Job Hub Chrome Extension
+# Her Job Hub — Auto Fill Extension
 
-Auto-fill job applications with your saved profile from the Her Job Hub web app.
+Auto-fills job application forms using your saved Her Job Hub profile.
 
-## Features
+## How it works
 
-- Reads your saved profile from the Her Job Hub web app
-- Detects form fields on LinkedIn, Indeed, Greenhouse, Lever, and Workday
-- Auto-fills name, email, phone, location, LinkedIn, portfolio, cover letter, and resume fields
-- Simple one-click popup UI
+1. The extension finds your open Her Job Hub tab and reads your Supabase session
+2. It fetches your profile (name, email, phone, LinkedIn, resume, etc.) from Supabase
+3. When you click **Auto-fill**, it detects and fills form fields on the current job page
+4. Cover letter fields are filled with your last AI-generated cover letter
 
-## Install Instructions
+## Install
 
-### Step 1 — Build or use the source directly
-
-No build step needed. The extension runs as-is from the `/extension` folder.
-
-### Step 2 — Load in Chrome
-
-1. Open Chrome and go to `chrome://extensions`
-2. Enable **Developer mode** (toggle in the top-right corner)
+1. Open **chrome://extensions** in Chrome
+2. Enable **Developer mode** (toggle, top right)
 3. Click **Load unpacked**
-4. Select the `/extension` folder from this project
-
-The extension icon will appear in your toolbar.
-
-### Step 3 — Add icons (optional)
-
-The manifest references icon files at `icons/icon16.png`, `icons/icon48.png`, `icons/icon128.png`.  
-You can add your own icons there, or remove the `"icons"` field from `manifest.json` to use Chrome's default.
-
-### Step 4 — Connect to your web app
-
-1. Open the Her Job Hub web app at `http://localhost:5173` (dev) or your Vercel URL
-2. Complete your Profile and click **Save Profile**
-3. The extension automatically syncs your profile data in the background
-
-> **Deployed app:** If you deploy to Vercel, open `popup.js` and update the `APP_URL` constant to your Vercel URL. Also add your Vercel domain to `host_permissions` in `manifest.json`.
+4. Select the `/extension` folder from this repo
+5. Pin the extension from the Chrome toolbar puzzle-piece menu
 
 ## Usage
 
-1. Navigate to a job application page (LinkedIn Easy Apply, Greenhouse, Indeed, etc.)
-2. Click the Her Job Hub icon in the Chrome toolbar
-3. Click **Auto-fill this page**
-4. The extension fills detected fields instantly
+1. Open **[Her Job Hub](https://her-job-hub.vercel.app)** in any tab and make sure you are logged in
+2. Navigate to a job application page (LinkedIn, Indeed, Greenhouse, Lever, Workday, etc.)
+3. Click the **Her Job Hub** extension icon in the toolbar
+4. Click **Auto-fill this page**
+5. Review the filled fields before submitting
 
-## Supported Sites
+## Supported fields
 
-| Site | Support Level |
-|------|--------------|
-| LinkedIn Easy Apply | ✅ Name, email, phone, cover letter |
-| Indeed | ✅ Name, email, phone |
-| Greenhouse | ✅ All standard fields |
-| Lever | ✅ All standard fields |
-| Workday | ⚠️ Partial (shadow DOM limits full auto-fill) |
+| Field | Detected by |
+|---|---|
+| First name | name / id / placeholder / label containing "first", "fname", "given" |
+| Last name | name / id / placeholder / label containing "last", "lname", "surname" |
+| Full name | autocomplete="name" or "full name" labels |
+| Email | type="email" or "email" in any label |
+| Phone | type="tel" or "phone", "mobile", "tel" labels |
+| LinkedIn URL | "linkedin" in any attribute or label |
+| Portfolio / Website | "portfolio", "website" labels |
+| City / Location | "city", "location" labels |
+| Salary expectation | "salary", "compensation", "pay" labels |
+| Cover letter | textareas with "cover letter", "motivation", "why apply" labels |
+| Resume text | textareas with "resume", "experience", "background" labels |
 
-## Privacy
+## Site-specific support
 
-All data stays local. Your profile is stored in `chrome.storage.local` — never sent to any server.
+- **LinkedIn Easy Apply** — fills the slide-in panel fields and cover letter textarea
+- **Indeed** — targets `applicant.*` field IDs directly
+- **Greenhouse** (boards.greenhouse.io) — targets standard `first_name`, `last_name` field names
+- **Lever** (jobs.lever.co) — fills name, email, phone, LinkedIn, portfolio, comments
+- **Workday** (myworkdayjobs.com) — uses `data-automation-id` attribute selectors
+
+## Troubleshooting
+
+**"Open Her Job Hub first"** — The extension reads your session from an open Her Job Hub tab. Open `her-job-hub.vercel.app` in any tab, log in, then retry.
+
+**"No fillable fields detected"** — Wait for the application form to fully load, scroll to it, then click Auto-fill again. Some SPAs inject forms dynamically.
+
+**Fields not updating** — The page may use a framework like React that manages input state. The extension dispatches native `input` and `change` events which should trigger React's handlers. If a field still doesn't update, fill it manually.

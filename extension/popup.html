@@ -2,42 +2,72 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Her Job Hub</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
   <div class="popup">
+
+    <!-- Header -->
     <div class="header">
       <div class="logo">✨</div>
-      <div>
+      <div class="header-text">
         <div class="title">Her Job Hub</div>
-        <div class="subtitle">AI Job Application Assistant</div>
+        <div class="subtitle">Auto-Fill Assistant</div>
       </div>
     </div>
 
-    <div id="profile-status" class="status-box status-loading">
-      <span class="status-dot"></span>
-      <span id="status-text">Loading profile…</span>
+    <!-- Loading -->
+    <div id="state-loading" class="state">
+      <div class="loading-row">
+        <div class="spinner"></div>
+        <span>Loading profile…</span>
+      </div>
     </div>
 
-    <div id="profile-summary" class="profile-summary hidden">
-      <div class="profile-name" id="profile-name"></div>
-      <div class="profile-email" id="profile-email"></div>
+    <!-- Not logged in -->
+    <div id="state-loggedout" class="state hidden">
+      <div class="info-box">
+        <div class="info-icon">🔒</div>
+        <p>Log in to Her Job Hub to use auto-fill.</p>
+        <a id="open-app-login" href="#" class="btn btn-primary btn-sm">Open Her Job Hub →</a>
+      </div>
     </div>
 
-    <button id="autofill-btn" class="btn btn-primary" disabled>
-      <span id="btn-text">Auto-fill this page</span>
-    </button>
+    <!-- No app tab open -->
+    <div id="state-notab" class="state hidden">
+      <div class="info-box">
+        <div class="info-icon">🔗</div>
+        <p>Open Her Job Hub in a tab first, then come back here.</p>
+        <a id="open-app-notab" href="#" class="btn btn-primary btn-sm">Open Her Job Hub →</a>
+      </div>
+    </div>
 
-    <div id="fill-result" class="fill-result hidden"></div>
+    <!-- Logged in + ready -->
+    <div id="state-ready" class="state hidden">
+      <div class="profile-card">
+        <div class="profile-avatar" id="profile-avatar">D</div>
+        <div>
+          <div class="profile-name" id="profile-name">David Ajose</div>
+          <div class="profile-email" id="profile-email">david@email.com</div>
+        </div>
+      </div>
 
-    <div class="divider"></div>
+      <div class="page-hint" id="page-hint"></div>
 
+      <button id="autofill-btn" class="btn btn-primary">
+        <span id="btn-icon">⚡</span>
+        <span id="btn-text">Auto-fill this page</span>
+      </button>
+
+      <div id="fill-result" class="fill-result hidden"></div>
+    </div>
+
+    <!-- Footer -->
     <div class="footer">
-      <a id="open-app" href="#" class="app-link">Open Her Job Hub →</a>
-      <div class="hint" id="page-hint"></div>
+      <a id="open-app-footer" href="#" class="app-link">Open Her Job Hub ↗</a>
     </div>
+
   </div>
   <script src="popup.js"></script>
 </body>
