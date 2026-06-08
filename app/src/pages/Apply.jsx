@@ -32,6 +32,7 @@ export default function Apply() {
   const [jobUrl, setJobUrl] = useState('')
   const [fetchingUrl, setFetchingUrl] = useState(false)
   const [urlError, setUrlError] = useState('')
+  const [urlSuccess, setUrlSuccess] = useState('')
 
   const [jobTitle, setJobTitle] = useState('')
   const [company, setCompany] = useState('')
@@ -67,14 +68,21 @@ export default function Apply() {
   const handleFetchUrl = async () => {
     if (!jobUrl.trim()) return
     setUrlError('')
+    setUrlSuccess('')
     setFetchingUrl(true)
     try {
-      const { title, company: co, description } = await extractJobFromUrl(jobUrl)
-      if (title) setJobTitle(title)
-      if (co) setCompany(co)
-      if (description) setJobDescription(description)
+      const result = await extractJobFromUrl(jobUrl)
+      if (result.title) setJobTitle(result.title)
+      if (result.company) setCompany(result.company)
+      if (result.description) setJobDescription(result.description)
+      setUrlSuccess('Job details loaded!')
     } catch (err) {
-      setUrlError(err.message || 'Could not fetch job details. Paste the description manually.')
+      const msg = err.message || ''
+      setUrlError(
+        msg.includes('LinkedIn') || msg.includes('Indeed') || msg.includes('block')
+          ? "Couldn't fetch this URL — LinkedIn and Indeed block automated access. Please paste the job description manually."
+          : "Couldn't fetch this URL automatically — please paste the job description manually."
+      )
     } finally {
       setFetchingUrl(false)
     }
@@ -155,7 +163,7 @@ export default function Apply() {
                 <input
                   type="url"
                   value={jobUrl}
-                  onChange={(e) => { setJobUrl(e.target.value); setUrlError('') }}
+                  onChange={(e) => { setJobUrl(e.target.value); setUrlError(''); setUrlSuccess('') }}
                   onKeyDown={(e) => e.key === 'Enter' && handleFetchUrl()}
                   placeholder="https://jobs.lever.co/company/job-id"
                   disabled={fetchingUrl}
@@ -165,10 +173,11 @@ export default function Apply() {
                   onClick={handleFetchUrl}
                   disabled={!jobUrl.trim() || fetchingUrl}
                 >
-                  {fetchingUrl ? <><span className="spinner spinner-sm spinner-primary" />Fetching…</> : 'Fetch'}
+                  {fetchingUrl ? <><span className="spinner spinner-sm spinner-primary" />Fetching job details…</> : 'Fetch'}
                 </button>
               </div>
-              {urlError && <div className="alert alert-error" style={{ marginTop: '0.5rem', marginBottom: 0 }}>{urlError}</div>}
+              {urlError   && <div className="alert alert-error"   style={{ marginTop: '0.5rem', marginBottom: 0 }}>{urlError}</div>}
+              {urlSuccess && <div className="alert alert-success" style={{ marginTop: '0.5rem', marginBottom: 0 }}>✓ {urlSuccess}</div>}
             </div>
 
             <hr className="section-divider" />

@@ -166,30 +166,30 @@ Return only the JSON array, no explanation.`,
 
 // ── Fetch job from URL ────────────────────────────────────────────────────────
 
-async function fetchViaProxy(url, timeoutMs = 20000) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await fetch(
-      `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-      { signal: controller.signal },
-    )
-    if (!res.ok) throw new Error(`Proxy responded with ${res.status}`)
-    const data = await res.json()
-    if (!data.contents) throw new Error('Proxy returned empty content')
-    return data.contents
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
 export async function extractJobFromUrl(url) {
+  // Call our own Vercel serverless proxy — avoids CORS and runs server-side
   let html
   try {
-    html = await fetchViaProxy(url)
-  } catch {
-    throw new Error("Couldn't fetch this URL automatically — the site may block external requests. Please paste the job description manually.")
+    const proxyRes = await fetch('/api/fetch-job', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+    if (!proxyRes.ok) {
+      const { error } = await proxyRes.json().catch(() => ({}))
+      throw new Error(error || `Proxy returned ${proxyRes.status}`)
+    }
+    const data = await proxyRes.json()
+    html = data.html
+  } catch (err) {
+    throw new Error(
+      err.message?.includes('block') || err.message?.includes('403') || err.message?.includes('429')
+        ? "Couldn't fetch this URL — LinkedIn and Indeed block automated access. Please paste the job description manually."
+        : "Couldn't fetch this URL automatically — please paste the job description manually."
+    )
   }
+
+  if (!html) throw new Error("Couldn't fetch this URL automatically — please paste the job description manually.")
 
   const text = html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -201,7 +201,7 @@ export async function extractJobFromUrl(url) {
     .replace(/&gt;/g, '>')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 8000)
+    .slice(0, 15000)
 
   if (!text) throw new Error("Couldn't fetch this URL automatically — please paste the job description manually.")
 
