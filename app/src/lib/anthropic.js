@@ -63,7 +63,14 @@ export async function generateApplicationMaterials(profile, jobTitle, company, j
     : []
 
   const structureInstruction = uploadedSections.length >= 2
-    ? `RESUME STRUCTURE: Mirror the candidate's own resume layout exactly. Use these section headers in this order: ${uploadedSections.join(' → ')}. Do not add or remove sections.`
+    ? `RESUME STRUCTURE — PRESERVE EXACTLY: The candidate has an uploaded resume. Mirror its format precisely.
+Section headers in EXACT order: ${uploadedSections.join(' → ')}.
+Rules (all mandatory):
+• Do NOT add, remove, or rename any section
+• Preserve the bullet point style (• character, same indentation depth)
+• Preserve date/location line format (match whatever style exists: "MMM YYYY – MMM YYYY | City" etc.)
+• Preserve visual hierarchy within each role: company first, then title, then date/location
+• Only content changes — structure, order, and formatting must be identical to the original`
     : `RESUME STRUCTURE: Include in order: Contact Info, Professional Summary, Work Experience, Skills, Education, Projects (if applicable).`
 
   // System prompt — stable profile content, cached across multiple generations

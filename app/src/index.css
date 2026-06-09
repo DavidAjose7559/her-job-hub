@@ -746,6 +746,19 @@ select {
 .job-card-badges { display: flex; gap: 0.375rem; flex-wrap: wrap; align-items: flex-start; flex-shrink: 0; }
 .job-card-main   { flex: 1; min-width: 0; }
 
+/* ── Uploaded resume file badge ── */
+.resume-file-badge {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--success-bg);
+  border: 1px solid #A7F3D0;
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.resume-file-name {
+  font-size: 0.8125rem; font-weight: 500; color: #065F46;
+}
+
 /* ── Search log debug section ── */
 .search-log-section {
   margin-top: 2rem;

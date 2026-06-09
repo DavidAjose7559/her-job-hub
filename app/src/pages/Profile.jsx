@@ -10,6 +10,7 @@ const INITIAL_PROFILE = {
   location: '', linkedIn: '', portfolio: '',
   resume: '',
   hasUploadedResume: false,
+  resumeFilePath: '',
   skills: [{ name: '', level: 'Intermediate' }],
   preferences: {
     desiredRoles: [],
@@ -30,6 +31,7 @@ const TEST_DATA = {
   location: 'Greater Toronto Area',
   linkedIn: 'https://www.linkedin.com/in/david-ajose-6566271aa/',
   hasUploadedResume: true,
+  resumeFilePath: '',
   portfolio: '',
   resume: `David Ajose
 Email: davidajose30@gmail.com | Mobile: (+1) 647-574-0866 | LinkedIn: David Ajose
@@ -245,8 +247,9 @@ export default function Profile() {
             location:         data.location  || '',
             linkedIn:         data.linkedin  || '',
             portfolio:        data.portfolio || '',
-            resume:           data.resume_text || '',
+            resume:           data.resume_text   || '',
             hasUploadedResume:!!(data.resume_text),
+            resumeFilePath:   data.resume_file_path || '',
             skills:           Array.isArray(data.skills) ? data.skills : [],
             toneEssay:        data.tone_sample || '',
             preferences: {
@@ -320,13 +323,38 @@ export default function Profile() {
   const handleResumeFile = async (file) => {
     setResumeFileLoading(true)
     try {
+      // Extract text for AI use
       const text = await extractTextFromFile(file)
-      setForm((f) => ({ ...f, resume: text, hasUploadedResume: true }))
+
+      // Upload original file to Supabase Storage at {userId}/resume.{ext}
+      const ext  = file.name.split('.').pop().toLowerCase()
+      const path = `${user.id}/resume.${ext}`
+      const { error: uploadErr } = await supabase.storage
+        .from('resumes')
+        .upload(path, file, { upsert: true })
+
+      if (uploadErr) console.warn('Storage upload failed:', uploadErr.message)
+
+      setForm((f) => ({
+        ...f,
+        resume:           text,
+        hasUploadedResume:true,
+        resumeFilePath:   uploadErr ? (f.resumeFilePath || '') : path,
+      }))
     } catch (err) {
       alert(err.message)
     } finally {
       setResumeFileLoading(false)
     }
+  }
+
+  const handleDownloadResume = async () => {
+    if (!form.resumeFilePath) return
+    const { data, error } = await supabase.storage
+      .from('resumes')
+      .createSignedUrl(form.resumeFilePath, 300)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+    else console.error('Could not create signed URL:', error?.message)
   }
 
   const handleToneFile = async (file) => {
@@ -393,9 +421,10 @@ export default function Profile() {
       salary:       pref.salaryMin && pref.salaryMax
                       ? `${pref.salaryMin}-${pref.salaryMax}`
                       : (pref.salaryMin || pref.salaryMax || ''),
-      about:        '',
-      tone_sample:  form.toneEssay  || '',
-      updated_at:   new Date().toISOString(),
+      about:            '',
+      tone_sample:      form.toneEssay      || '',
+      resume_file_path: form.resumeFilePath || null,
+      updated_at:       new Date().toISOString(),
     })
     if (error) {
       setSaveState('error')
@@ -488,6 +517,16 @@ export default function Profile() {
           <div className="card-title"><span className="card-title-icon">📄</span> Resume</div>
           <FileUploadBtn onExtract={handleResumeFile} loading={resumeFileLoading} label="Upload Resume" />
         </div>
+        {form.resumeFilePath && (
+          <div className="resume-file-badge">
+            <span className="resume-file-name">
+              ✓ {form.resumeFilePath.split('/').pop()}
+            </span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleDownloadResume}>
+              Download original
+            </button>
+          </div>
+        )}
         <p className="text-muted" style={{ marginBottom: '0.625rem' }}>
           Upload a file (.pdf, .docx, .txt) or paste your resume text below.
         </p>
